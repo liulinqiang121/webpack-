@@ -1,0 +1,319 @@
+1  webpack/bin/webpack.js里面开头源码如下：
+      var path = require("path");
+      // Local version replace global one
+      try {
+        var localWebpack = require.resolve(path.join(process.cwd(), "node_modules", "webpack", "bin", "webpack.js"));
+        if(__filename !== localWebpack) {
+          return require(localWebpack);
+        }
+      } catch(e) {}
+      如果正在webpack的文件路径是不是当前文件，则调用node_modules模块下webpack模块，这里的作用是当前模块版本下的webpack取代全局的webpack的引用
+2  源码继续往下是webpack 命令源码：
+     
+      require("./config-yargs")(yargs); 
+      // 调用yargs模块，yargs是命令参数解析模块
+      var DISPLAY_GROUP = "Stats options:";
+      var BASIC_GROUP = "Basic options:";
+      yargs.options({
+        "json": {
+          type: "boolean",
+          alias: "j",
+          describe: "Prints the result as JSON."
+        },
+        "progress": {
+          type: "boolean",
+          describe: "Print compilation progress in percentage",
+          group: BASIC_GROUP
+        },
+        "color": {
+          type: "boolean",
+          alias: "colors",
+          default: function supportsColor() {
+            return require("supports-color");
+          },
+          group: DISPLAY_GROUP,
+          describe: "Enables/Disables colors on the console"
+        },
+        "sort-modules-by": {
+          type: "string",
+          group: DISPLAY_GROUP,
+          describe: "Sorts the modules list by property in module"
+        },
+        "sort-chunks-by": {
+          type: "string",
+          group: DISPLAY_GROUP,
+          describe: "Sorts the chunks list by property in chunk"
+        },
+        "sort-assets-by": {
+          type: "string",
+          group: DISPLAY_GROUP,
+          describe: "Sorts the assets list by property in asset"
+        },
+        "hide-modules": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Hides info about modules"
+        },
+        "display-exclude": {
+          type: "string",
+          group: DISPLAY_GROUP,
+          describe: "Exclude modules in the output"
+        },
+        "display-modules": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display even excluded modules in the output"
+        },
+        "display-max-modules": {
+          type: "number",
+          group: DISPLAY_GROUP,
+          describe: "Sets the maximum number of visible modules in output"
+        },
+        "display-chunks": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display chunks in the output"
+        },
+        "display-entrypoints": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display entry points in the output"
+        },
+        "display-origins": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display origins of chunks in the output"
+        },
+        "display-cached": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display also cached modules in the output"
+        },
+        "display-cached-assets": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display also cached assets in the output"
+        },
+        "display-reasons": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display reasons about module inclusion in the output"
+        },
+        "display-depth": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display distance from entry point for each module"
+        },
+        "display-used-exports": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display information about used exports in modules (Tree Shaking)"
+        },
+        "display-provided-exports": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display information about exports provided from modules"
+        },
+        "display-optimization-bailout": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display information about why optimization bailed out for modules"
+        },
+        "display-error-details": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Display details about errors"
+        },
+        "display": {
+          type: "string",
+          group: DISPLAY_GROUP,
+          describe: "Select display preset (verbose, detailed, normal, minimal, errors-only, none)"
+        },
+        "verbose": {
+          type: "boolean",
+          group: DISPLAY_GROUP,
+          describe: "Show more details"
+        }
+      });
+      // 上面是模块的命令，例如命令里添加 --process,显示运行过程，json，结果打印出json格式，color 添加颜色
+      3 解析上面的命令参数，并执行回调
+           yargs.parse(process.argv.slice(2), (err, argv, output) => {
+           
+          // arguments validation failed
+          // 发生错误，打印错误，返回
+          if(err && output) {
+            console.error(output);
+            process.exitCode = 1;
+            return;
+          }
+          
+          // help or version info
+          // 打印出帮助和版本信息，返回
+          if(output) {
+            console.log(output);
+            return;
+          }
+
+          // webpack打印的类型，有verbose,detailed,normal,ninimal,errors-only,none;冗长，详细，正常，最小，错误，不显示等
+          if(argv.verbose) {
+            argv["display"] = "verbose";
+          }
+          // 引入yargs解析模块
+          var options = require("./convert-argv")(yargs, argv);
+
+          // 命令处理函数
+          function ifArg(name, fn, init) {
+            if(Array.isArray(argv[name])) {
+              if(init) init();
+              argv[name].forEach(fn);
+            } else if(typeof argv[name] !== "undefined") {
+              if(init) init();
+              fn(argv[name], -1);
+            }
+          }
+          // 最终调用的函数，参数是引入的命令模块
+          function processOptions(options) {
+            // process Promise
+            // 如果是支持es6的promise，就调用引入的命令模块调用后then方法后运行
+            if(typeof options.then === "function") {
+              options.then(processOptions).catch(function(err) {
+                console.error(err.stack || err);
+                process.exit(1); // eslint-disable-line
+              });
+              return;
+            }
+            // 取第一个参数
+            var firstOptions = [].concat(options)[0];
+            // 设置打包的显示的类型
+            var statsPresetToOptions = require("../lib/Stats.js").presetToOptions;
+
+            var outputOptions = options.stats;
+            // 命令为参数的类型不通，outputOptions定义不通
+            if(typeof outputOptions === "boolean" || typeof outputOptions === "string") {
+              outputOptions = statsPresetToOptions(outputOptions);
+            } else if(!outputOptions) {
+              outputOptions = {};
+            }
+         
+            ifArg("display", function(preset) {
+              outputOptions = statsPresetToOptions(preset);
+            });
+
+            outputOptions = Object.create(outputOptions);
+            //如果是数组，递归调用starts
+            if(Array.isArray(options) && !outputOptions.children) {
+              outputOptions.children = options.map(o => o.stats);
+            }
+            if(typeof outputOptions.context === "undefined")
+              outputOptions.context = firstOptions.context;
+            // 设置环境
+            ifArg("env", function(value) {
+              if(outputOptions.env) {
+                outputOptions._env = value;
+              }
+            });
+            // 设置是否json的格式
+            ifArg("json", function(bool) {
+              if(bool)
+                outputOptions.json = bool;
+            });
+            // 设置颜色
+            if(typeof outputOptions.colors === "undefined")
+              outputOptions.colors = require("supports-color");
+            // 模块顺序
+            ifArg("sort-modules-by", function(value) {
+              outputOptions.modulesSort = value;
+            });
+            // 分割后的模块排序
+            ifArg("sort-chunks-by", function(value) {
+              outputOptions.chunksSort = value;
+            });
+             // 资源排序
+            ifArg("sort-assets-by", function(value) {
+              outputOptions.assetsSort = value;
+            });
+             // 排除命令
+            ifArg("display-exclude", function(value) {
+              outputOptions.exclude = value;
+            });
+             // 如下都是根据各个命令以及他们的回调
+            if(!outputOptions.json) {
+            
+              .........
+            
+            }
+
+            // 调用../lib/webpack,
+            var webpack = require("../lib/webpack.js");
+
+            Error.stackTraceLimit = 30;
+            var lastHash = null;
+            var compiler;
+            try {
+              //调用编译模块，开始编译
+              compiler = webpack(options);
+            } catch(err) {
+              if(err.name === "WebpackOptionsValidationError") {
+                if(argv.color)
+                  console.error(
+                    `\u001b[1m\u001b[31m${err.message}\u001b[39m\u001b[22m`
+                  );
+                else
+                  console.error(err.message);
+                // eslint-disable-next-line no-process-exit
+                process.exit(1);
+              }
+
+              throw err;
+            }
+
+            if(argv.progress) {
+              var ProgressPlugin = require("../lib/ProgressPlugin");
+              compiler.apply(new ProgressPlugin({
+                profile: argv.profile
+              }));
+            }
+            // 编译的回调
+            function compilerCallback(err, stats) {
+              if(!options.watch || err) {
+                // Do not keep cache anymore
+                compiler.purgeInputFileSystem();
+              }
+              if(err) {
+                lastHash = null;
+                console.error(err.stack || err);
+                if(err.details) console.error(err.details);
+                process.exitCode = 1;
+                return;
+              }
+              if(outputOptions.json) {
+                process.stdout.write(JSON.stringify(stats.toJson(outputOptions), null, 2) + "\n");
+              } else if(stats.hash !== lastHash) {
+                lastHash = stats.hash;
+                var statsString = stats.toString(outputOptions);
+                if(statsString)
+                  process.stdout.write(statsString + "\n");
+              }
+              if(!options.watch && stats.hasErrors()) {
+                process.exitCode = 2;
+              }
+            }
+            // 第一个参数结束方法
+            if(firstOptions.watch || options.watch) {
+              var watchOptions = firstOptions.watchOptions || firstOptions.watch || options.watch || {};
+              if(watchOptions.stdin) {
+                process.stdin.on("end", function() {
+                  process.exit(); // eslint-disable-line
+                });
+                process.stdin.resume();
+              }
+              compiler.watch(watchOptions, compilerCallback);
+              console.log("\nWebpack is watching the files…\n");
+            } else
+              compiler.run(compilerCallback);
+
+          }
+
+          processOptions(options);
+
+        });
