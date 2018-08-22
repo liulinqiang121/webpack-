@@ -1,0 +1,52 @@
+ 简单写了一个config.js然后入口是1.js，里面只有一句：console.log(1),然后使用命令：webpack --config config.js,结果和分析如下：
+首先这是一个自执行函数，将关联的模块以数组的方式返回：
+function (e) {
+    var n = {};
+
+    function t(r) {
+        // 如果有这个模块的id，直接返回导出的模块
+        if (n[r]) return n[r].exports;
+        var o = n[r] = {
+            i: r,
+            l: !1,
+            exports: {}
+        };
+        return e[r].call(o.exports, o, o.exports, t), o.l = !0,
+            o.exports
+    }
+    // 模块数组
+    t.m = e,
+    // 默认模块
+    t.c = n,
+    //设置属性
+    t.d = function (e, n, r) {
+        t.o(e, n) || Object.defineProperty(e, n, {
+            configurable: !1,
+            enumerable: !0,
+            get: r
+        })
+    },
+     // 设置为es6导出的模块
+     t.r = function (e) {
+        Object.defineProperty(e, "__esModule", {
+            value: !0
+        })
+    },
+    // 设置模块的a属性，并返回模块
+     t.n = function (e) {
+        var n = e && e.__esModule ? function () {
+            return e.default
+        } : function () {
+            return e
+        };
+        return t.d(n, "a", n), n
+    }, 
+    //是否含有自带属性
+    t.o = function (e, n) {
+        return Object.prototype.hasOwnProperty.call(e, n)
+    }, 
+    // 公共路径
+    t.p = "", t(t.s = 0)
+}([function (e, n) {
+    console.log("input")
+}]);
