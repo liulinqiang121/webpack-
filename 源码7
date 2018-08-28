@@ -1,0 +1,12 @@
+来看./lib/webpack.js ,其中含有文件头引入模块八个模块
+const Compiler = require("./Compiler");
+const MultiCompiler = require("./MultiCompiler");
+const NodeEnvironmentPlugin = require("./node/NodeEnvironmentPlugin");
+const WebpackOptionsApply = require("./WebpackOptionsApply");
+const WebpackOptionsDefaulter = require("./WebpackOptionsDefaulter");
+const validateSchema = require("./validateSchema");
+const WebpackOptionsValidationError = require("./WebpackOptionsValidationError");
+const webpackOptionsSchema = require("../schemas/webpackOptionsSchema.json");
+
+现在来一一查看，首先是Compiler:
+
